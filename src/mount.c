@@ -177,14 +177,18 @@ static void free_options(struct mount_options *options)
 		free(options->value[i]);
 }
 
+static int do_mount(struct mount_options *options)
+{
+	return 0;
+}
+
 static int mount_main(int argc, char **argv)
 {
 	struct mount_options options = {};
 	const char *optstring = "dhfo:";
-	const char *fixed_args[3] = {};
-	int has_help = 0;
 	int opt;
 	int i;
+	int retval;
 
 	for (i = 0; i < 3; ++i)
 	{
@@ -199,13 +203,18 @@ static int mount_main(int argc, char **argv)
 					options.flag[MOUNT_FOREGROUND] = 1;
 					break;
 				case 'h':
-					has_help++;
-					break;
+					mount_help(argv[0]);
+					free_options(&options);
+					return EXIT_SUCCESS;
 				case 'o':
 					if (parse_options(&options, optarg) == -1)
+					{
+						free_options(&options);
 						return EXIT_FAILURE;
+					}
 					break;
 				case '?':
+					free_options(&options);
 					return EXIT_FAILURE;
 				default:
 					assert(0 && "getopt switch case insufficient");
@@ -215,40 +224,32 @@ static int mount_main(int argc, char **argv)
 
 		if (optind < argc)
 		{
-			fixed_args[i] = argv[optind];
+			switch (i)
+			{
+				case 0:
+					options.value[MOUNT_REPOPATH] = strdup(argv[optind]);
+					options.flag[MOUNT_REPOPATH] = 1;
+					break;
+				case 1:
+					options.value[MOUNT_MOUNTPOINT] = strdup(argv[optind]);
+					options.flag[MOUNT_MOUNTPOINT] = 1;
+					break;
+				default:
+					fprintf(stderr, "%s: unexpected non-option argument: %s\n", argv[0], argv[optind]);
+					free_options(&options);
+					return EXIT_FAILURE;
+			}
 			++optind;
 		}
 	}
 
-	if (has_help)
-	{
-		mount_help(argv[0]);
-		return EXIT_SUCCESS;
-	}
-
-	if (fixed_args[0])
-	{
-		options.value[MOUNT_REPOPATH] = strdup(fixed_args[0]);
-		options.flag[MOUNT_REPOPATH] = 1;
-	}
-
-	if (fixed_args[1])
-	{
-		options.value[MOUNT_MOUNTPOINT] = strdup(fixed_args[1]);
-		options.flag[MOUNT_MOUNTPOINT] = 1;
-	}
-
-	if (check_options(&options, argv[0]) < 0)
-	{
-		free_options(&options);
-		return EXIT_FAILURE;
-	}
-
-	if (options.flag[MOUNT_DEBUG])
-		printf("Mounting '%s' on '%s'...\n", options.value[MOUNT_REPOPATH], options.value[MOUNT_MOUNTPOINT]);
+	if (check_options(&options, argv[0]) == 0)
+		retval = do_mount(&options);
+	else
+		retval = -1;
 
 	free_options(&options);
-	return EXIT_SUCCESS;
+	return retval == 0 ? EXIT_SUCCESS : EXIT_FAILURE;
 }
 
 struct gitfs_function gitfs_mount = {
