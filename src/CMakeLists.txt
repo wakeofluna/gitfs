@@ -1,5 +1,7 @@
 set(SOURCE_FILES
 	gitfs.c
+	mount.c
+	umount.c
 )
 
 find_package(PkgConfig)
