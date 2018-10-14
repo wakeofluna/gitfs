@@ -21,3 +21,8 @@ target_compile_options(gitfs
 	PUBLIC ${LIBGIT2_CFLAGS_OTHER}
 	PUBLIC ${FUSE_CFLAGS_OTHER}
 )
+add_custom_command(TARGET gitfs POST_BUILD
+	COMMAND ${CMAKE_COMMAND} -E create_symlink gitfs mount.gitfs
+	BYPRODUCTS mount.gitfs
+	VERBATIM
+)
