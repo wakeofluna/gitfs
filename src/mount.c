@@ -16,6 +16,8 @@ struct mount_flag
 static const struct mount_flag mount_flags[] = {
 		{ "ro", "Mount the repository readonly (default)", MOUNT_READONLY },
 		{ "rw", "Mount the repository readwrite", MOUNT_READWRITE },
+		{ "branch", "Mount the tip of a specific branch", MOUNT_BRANCH },
+		{ "commit", "Mount a specific commit or tag", MOUNT_COMMIT },
 		{ NULL }
 };
 

@@ -12,6 +12,8 @@ enum mount_option_flag
 	/* Mount options that require an argument */
 	MOUNT_REPOPATH,
 	MOUNT_MOUNTPOINT,
+	MOUNT_BRANCH,
+	MOUNT_COMMIT,
 	MOUNT_OPTION_MAX_VALUE,
 
 	/* Mount options that do not have an argument (flags) */
