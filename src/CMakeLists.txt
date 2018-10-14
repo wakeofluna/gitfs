@@ -20,6 +20,7 @@ target_include_directories(gitfs
 target_compile_options(gitfs
 	PUBLIC ${LIBGIT2_CFLAGS_OTHER}
 	PUBLIC ${FUSE_CFLAGS_OTHER}
+	PUBLIC -DFUSE_USE_VERSION=26
 )
 add_custom_command(TARGET gitfs POST_BUILD
 	COMMAND ${CMAKE_COMMAND} -E create_symlink gitfs mount.gitfs
