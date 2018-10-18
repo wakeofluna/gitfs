@@ -3,166 +3,107 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
-#include <unistd.h>
+#include <fuse.h>
+#include <git2.h>
 #include "gitfs.h"
 
-struct mount_flag
+#define GITFS_OPT(n,k,v) { n, offsetof(struct mount_options, k), v }
+
+enum cmdline_option_keys
 {
-	const char *name;
-	const char *description;
-	enum mount_option_flag index;
+	KEY_FUSE_NONOPT  = FUSE_OPT_KEY_NONOPT,
+	KEY_FUSE_OPT     = FUSE_OPT_KEY_OPT,
+	KEY_HELP         = 0,
+	KEY_VERSION,
+	KEY_FOREGROUND,
+	KEY_DEBUG,
+	KEY_READONLY,
+	KEY_READWRITE
 };
 
-static const struct mount_flag mount_flags[] = {
-		{ "ro", "Mount the repository readonly (default)", MOUNT_READONLY },
-		{ "rw", "Mount the repository readwrite", MOUNT_READWRITE },
-		{ "branch", "Mount the tip of a specific branch", MOUNT_BRANCH },
-		{ "commit", "Mount a specific commit or tag", MOUNT_COMMIT },
+static struct fuse_opt cmdline_options[] =
+{
+		GITFS_OPT("branch=%s", branch, 0),
+		GITFS_OPT("commit=%s", commit, 0),
+
+		FUSE_OPT_KEY("-h", KEY_HELP),
+		FUSE_OPT_KEY("--help", KEY_HELP),
+		FUSE_OPT_KEY("-V", KEY_VERSION),
+		FUSE_OPT_KEY("--version", KEY_VERSION),
+		FUSE_OPT_KEY("-f", KEY_FOREGROUND),
+		FUSE_OPT_KEY("-d", KEY_DEBUG),
+		FUSE_OPT_KEY("debug", KEY_DEBUG),
+		FUSE_OPT_KEY("ro", KEY_READONLY),
+		FUSE_OPT_KEY("rw", KEY_READWRITE),
+
 		{ NULL }
 };
 
 static void mount_help(const char *command)
 {
-	const struct mount_flag *flag;
-	int maxlen = 0;
-
-	print_version();
-	printf("\n%s: %s\n", command, gitfs_mount.description);
-	printf("\nUsage:\n");
-	printf(" %s -h\n", command);
-	printf(" %s <path-to-git-repo> <mountpoint> [-d] [-f] [-o options]\n", command);
-
-	for (flag = mount_flags; flag->name != NULL; ++flag)
-	{
-		int len = strlen(flag->name) + (flag->index < MOUNT_OPTION_MAX_VALUE ? 2 : 0);
-		if (maxlen < len)
-			maxlen = len;
-	}
-
-	printf("\nOptions:\n");
-	printf(" -d %-*s  Enable debugging output (implies -f)\n", maxlen, "");
-	printf(" -f %-*s  Run in foreground\n", maxlen, "");
-	printf("\nMount options:\n");
-
-	for (flag = mount_flags; flag->name != NULL; ++flag)
-	{
-		if (flag->index < MOUNT_OPTION_MAX_VALUE)
-		{
-			int len = strlen(flag->name);
-			printf(" -o %s=X %*s %s\n", flag->name, maxlen - len - 2, "", flag->description);
-		}
-		else
-		{
-			printf(" -o %-*s  %s\n", maxlen, flag->name, flag->description);
-		}
-	}
-
-	printf("\n");
+	fprintf(stderr, "%s: %s\n", command, gitfs_mount.description);
+	fprintf(stderr,
+			"\nusage: gitfs mount /path/to/git/repo mountpoint [options]\n"
+			"\nGITFS options:\n"
+			"    -o branch=STR    Mount the tip of a specific branch\n"
+			"    -o commit=STR    Mount a specific commit or tag\n"
+			"\n");
 }
 
-static int parse_option(struct mount_options *options, const char *key, int keylen, const char *value, int valuelen)
+static int mount_parse_opts(void *data, const char *arg, int key, struct fuse_args *outargs)
 {
-	const struct mount_flag *flag;
+	struct mount_options *options = (struct mount_options*)data;
 
-	if (keylen == 0)
-		return 0;
-
-	for (flag = mount_flags; flag->name != NULL; ++flag)
+	switch ((enum cmdline_option_keys)key)
 	{
-		int len = strlen(flag->name);
-		if (len == keylen && memcmp(key, flag->name, len) == 0)
-			break;
-	}
+		case KEY_FUSE_OPT:
+			return 1;
 
-	if (flag->name == NULL)
-	{
-		fprintf(stderr, "unknown option: -o %.*s\n", keylen, key);
-		return -1;
-	}
-
-	if (flag->index < MOUNT_OPTION_MAX_VALUE && valuelen == 0)
-	{
-		fprintf(stderr, "missing required argument to option '%.*s'\n", keylen, key);
-		return -1;
-	}
-
-	if (flag->index >= MOUNT_OPTION_MAX_VALUE && valuelen > 0)
-	{
-		fprintf(stderr, "unexpected argument to option '%.*s': %.*s\n", keylen, key, valuelen, value);
-		return -1;
-	}
-
-	options->flag[flag->index] = 1;
-
-	if (flag->index < MOUNT_OPTION_MAX_VALUE)
-	{
-		free(options->value[flag->index]);
-		options->value[flag->index] = NULL;
-
-		if (valuelen > 0)
-		{
-			char *block = (char*) malloc(valuelen + 1);
-			if (block == NULL)
+		case KEY_FUSE_NONOPT:
+			if (!options->repopath)
 			{
-				fprintf(stderr, "out of memory copying option value for '%.*s'\n", keylen, key);
-				return -1;
+				options->repopath = realpath(arg, NULL);
+				return 0;
 			}
+			return 1;
 
-			memcpy(block, value, valuelen);
-			block[valuelen] = '\0';
-		}
+		case KEY_HELP:
+			mount_help(outargs->argv[0]);
+			return fuse_opt_add_arg(outargs, "-ho");
+
+		case KEY_VERSION:
+			print_version();
+			return 1;
+
+		case KEY_FOREGROUND:
+			options->foreground = 1;
+			return 1;
+
+		case KEY_DEBUG:
+			options->debug = 1;
+			options->foreground = 1;
+			return 1;
+
+		case KEY_READONLY:
+			options->readwrite = 0;
+			return 1;
+
+		case KEY_READWRITE:
+			options->readwrite = 1;
+			return 1;
 	}
 
-	return 0;
-}
-
-static int parse_options(struct mount_options *options, const char *optionstring)
-{
-	const char *end;
-	const char *key;
-	const char *split;
-	const char *key_end;
-	const char *value;
-
-	end = optionstring + strlen(optionstring);
-
-	for (key = optionstring; key < end; key = split + 1)
-	{
-		split = memchr(key, ',', end - key);
-		if (!split)
-			split = end;
-
-		key_end = memchr(key, '=', split - key);
-		if (!key_end)
-		{
-			key_end = split;
-			value = split;
-		}
-		else
-		{
-			value = key_end + 1;
-		}
-
-		if (parse_option(options, key, key_end - key, value, split - value) < 0)
-			return -1;
-	}
-
-	return 0;
+	fprintf(stderr, "unhandled option: (%d) %s\n", key, arg);
+	return -1;
 }
 
 static int check_options(const struct mount_options *options, const char *argv0)
 {
 	int retval = 0;
 
-	if (!options->flag[MOUNT_REPOPATH] || !options->value[MOUNT_REPOPATH])
+	if (!options->repopath)
 	{
-		fprintf(stderr, "%s: missing required argument: path-to-git-repo\n", argv0);
-		retval = -1;
-	}
-
-	if (!options->flag[MOUNT_MOUNTPOINT] || !options->value[MOUNT_MOUNTPOINT])
-	{
-		fprintf(stderr, "%s: missing required argument: mountpoint\n", argv0);
+		fprintf(stderr, "%s: missing required argument: /path/to/git/repo\n", argv0);
 		retval = -1;
 	}
 
@@ -171,88 +112,47 @@ static int check_options(const struct mount_options *options, const char *argv0)
 
 static void free_options(struct mount_options *options)
 {
-	int i;
-
-	for (i = 0; i < MOUNT_OPTION_MAX_VALUE; ++i)
-		free(options->value[i]);
-}
-
-static int do_mount(struct mount_options *options)
-{
-	return 0;
+	free(options->repopath);
+	free(options->branch);
+	free(options->commit);
 }
 
 static int mount_main(int argc, char **argv)
 {
 	struct mount_options options = {};
-	const char *optstring = "dhfo:";
-	int opt;
-	int i;
-	int retval;
+	struct fuse_args args = FUSE_ARGS_INIT(argc, argv);
+	int retval = 0;
 
-	for (i = 0; i < 3; ++i)
+	if (retval == 0)
+		retval = fuse_opt_parse(&args, &options, cmdline_options, &mount_parse_opts);
+
+	if (retval == 0)
+		retval = check_options(&options, argv[0]);
+
+	if (retval == 0)
+		retval = fuse_opt_add_arg(&args, "-osubtype=gitfs");
+
+	if (retval == 0)
 	{
-		for (opt = getopt(argc, argv, optstring); opt != -1; opt = getopt(argc, argv, optstring))
+		int len = strlen(options.repopath);
+		char *buf = malloc(len + 10);
+		if (buf)
 		{
-			switch (opt)
-			{
-				case 'd':
-					options.flag[MOUNT_DEBUG] = 1;
-					/* no break */
-				case 'f':
-					options.flag[MOUNT_FOREGROUND] = 1;
-					break;
-				case 'h':
-					mount_help(argv[0]);
-					free_options(&options);
-					return EXIT_SUCCESS;
-				case 'o':
-					if (parse_options(&options, optarg) == -1)
-					{
-						free_options(&options);
-						return EXIT_FAILURE;
-					}
-					break;
-				case '?':
-					free_options(&options);
-					return EXIT_FAILURE;
-				default:
-					assert(0 && "getopt switch case insufficient");
-					return EXIT_FAILURE;
-			}
-		}
-
-		if (optind < argc)
-		{
-			switch (i)
-			{
-				case 0:
-					options.value[MOUNT_REPOPATH] = strdup(argv[optind]);
-					options.flag[MOUNT_REPOPATH] = 1;
-					break;
-				case 1:
-					options.value[MOUNT_MOUNTPOINT] = strdup(argv[optind]);
-					options.flag[MOUNT_MOUNTPOINT] = 1;
-					break;
-				default:
-					fprintf(stderr, "%s: unexpected non-option argument: %s\n", argv[0], argv[optind]);
-					free_options(&options);
-					return EXIT_FAILURE;
-			}
-			++optind;
+			snprintf(buf, len + 10, "-ofsname=%s", options.repopath);
+			retval = fuse_opt_add_arg(&args, buf);
+			free(buf);
 		}
 	}
 
-	if (check_options(&options, argv[0]) == 0)
-		retval = do_mount(&options);
-	else
-		retval = -1;
+	if (retval == 0)
+		retval = fuse_main(args.argc, args.argv, &gitfs_operations, &options);
 
 	free_options(&options);
 	return retval == 0 ? EXIT_SUCCESS : EXIT_FAILURE;
 }
 
-struct gitfs_function gitfs_mount = {
+struct gitfs_function gitfs_mount =
+{
 		.description = "Mount a local git repository as a filesystem",
 		.main = &mount_main,
 		.help = &mount_help

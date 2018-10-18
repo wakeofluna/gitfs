@@ -1,4 +1,5 @@
 set(SOURCE_FILES
+	fuse.c
 	gitfs.c
 	mount.c
 	umount.c

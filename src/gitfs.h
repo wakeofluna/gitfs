@@ -7,27 +7,16 @@
 
 void print_version(void);
 
-enum mount_option_flag
-{
-	/* Mount options that require an argument */
-	MOUNT_REPOPATH,
-	MOUNT_MOUNTPOINT,
-	MOUNT_BRANCH,
-	MOUNT_COMMIT,
-	MOUNT_OPTION_MAX_VALUE,
-
-	/* Mount options that do not have an argument (flags) */
-	MOUNT_DEBUG,
-	MOUNT_FOREGROUND,
-	MOUNT_READONLY,
-	MOUNT_READWRITE,
-	MOUNT_OPTION_MAX
-};
-
 struct mount_options
 {
-	char *value[MOUNT_OPTION_MAX_VALUE];
-	char flag[MOUNT_OPTION_MAX];
+	char *repopath;
+	char *mountpoint;
+	char *branch;
+	char *commit;
+
+	int foreground;
+	int debug;
+	int readwrite;
 };
 
 struct gitfs_function
@@ -37,6 +26,8 @@ struct gitfs_function
 	void (*help)(const char *command);
 };
 
+struct fuse_operations;
+extern struct fuse_operations gitfs_operations;
 extern struct gitfs_function gitfs_mount;
 extern struct gitfs_function gitfs_umount;
 
