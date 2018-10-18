@@ -7,7 +7,7 @@
 #include <git2.h>
 #include "gitfs.h"
 
-#define GITFS_OPT(n,k,v) { n, offsetof(struct mount_options, k), v }
+#define MOUNT_OPT(n,k,v) { n, offsetof(struct mount_options, k), v }
 
 enum cmdline_option_keys
 {
@@ -23,8 +23,8 @@ enum cmdline_option_keys
 
 static struct fuse_opt cmdline_options[] =
 {
-		GITFS_OPT("branch=%s", branch, 0),
-		GITFS_OPT("commit=%s", commit, 0),
+		MOUNT_OPT("branch=%s", branch, 0),
+		MOUNT_OPT("commit=%s", commit, 0),
 
 		FUSE_OPT_KEY("-h", KEY_HELP),
 		FUSE_OPT_KEY("--help", KEY_HELP),
@@ -43,10 +43,14 @@ static void mount_help(const char *command)
 {
 	fprintf(stderr, "%s: %s\n", command, gitfs_mount.description);
 	fprintf(stderr,
-			"\nusage: gitfs mount /path/to/git/repo mountpoint [options]\n"
+			"\nusage: gitfs mount <path/to/git/repo> <mountpoint> [options]\n"
+			"\ngeneral options:\n"
+			"    -o opt[,opt...]        mount options\n"
+			"    -h   --help            print help\n"
+			"    -V   --version         print version\n"
 			"\nGITFS options:\n"
-			"    -o branch=STR    Mount the tip of a specific branch\n"
-			"    -o commit=STR    Mount a specific commit or tag\n"
+			"    -o branch=STR          mount the tip of a specific branch\n"
+			"    -o commit=STR          mount a specific commit or tag\n"
 			"\n");
 }
 
@@ -68,10 +72,12 @@ static int mount_parse_opts(void *data, const char *arg, int key, struct fuse_ar
 			return 1;
 
 		case KEY_HELP:
+			options->skip_check = 1;
 			mount_help(outargs->argv[0]);
 			return fuse_opt_add_arg(outargs, "-ho");
 
 		case KEY_VERSION:
+			options->skip_check = 1;
 			print_version();
 			return 1;
 
@@ -126,13 +132,13 @@ static int mount_main(int argc, char **argv)
 	if (retval == 0)
 		retval = fuse_opt_parse(&args, &options, cmdline_options, &mount_parse_opts);
 
-	if (retval == 0)
+	if (retval == 0 && !options.skip_check)
 		retval = check_options(&options, argv[0]);
 
 	if (retval == 0)
 		retval = fuse_opt_add_arg(&args, "-osubtype=gitfs");
 
-	if (retval == 0)
+	if (retval == 0 && options.repopath != NULL)
 	{
 		int len = strlen(options.repopath);
 		char *buf = malloc(len + 10);
@@ -154,6 +160,5 @@ static int mount_main(int argc, char **argv)
 struct gitfs_function gitfs_mount =
 {
 		.description = "Mount a local git repository as a filesystem",
-		.main = &mount_main,
-		.help = &mount_help
+		.main = &mount_main
 };

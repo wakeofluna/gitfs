@@ -14,6 +14,8 @@ struct mount_options
 	char *branch;
 	char *commit;
 
+	int skip_check;
+
 	int foreground;
 	int debug;
 	int readwrite;
@@ -23,7 +25,6 @@ struct gitfs_function
 {
 	const char *description;
 	int (*main)(int argc, char **argv);
-	void (*help)(const char *command);
 };
 
 struct fuse_operations;
