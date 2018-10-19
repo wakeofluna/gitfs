@@ -67,6 +67,11 @@ static int mount_parse_opts(void *data, const char *arg, int key, struct fuse_ar
 			if (!options->repopath)
 			{
 				options->repopath = realpath(arg, NULL);
+				if (!options->repopath)
+				{
+					perror("gitfs mount: repopath invalid");
+					return -1;
+				}
 				return 0;
 			}
 			return 1;
@@ -99,17 +104,17 @@ static int mount_parse_opts(void *data, const char *arg, int key, struct fuse_ar
 			return 1;
 	}
 
-	fprintf(stderr, "unhandled option: (%d) %s\n", key, arg);
+	fprintf(stderr, "gitfs mount: unhandled option: (%d) %s\n", key, arg);
 	return -1;
 }
 
-static int check_options(const struct mount_options *options, const char *argv0)
+static int check_options(const struct mount_options *options)
 {
 	int retval = 0;
 
 	if (!options->repopath)
 	{
-		fprintf(stderr, "%s: missing required argument: /path/to/git/repo\n", argv0);
+		fprintf(stderr, "gitfs mount: missing required argument: /path/to/git/repo\n");
 		retval = -1;
 	}
 
@@ -133,7 +138,7 @@ static int mount_main(int argc, char **argv)
 		retval = fuse_opt_parse(&args, &options, cmdline_options, &mount_parse_opts);
 
 	if (retval == 0 && !options.skip_check)
-		retval = check_options(&options, argv[0]);
+		retval = check_options(&options);
 
 	if (retval == 0)
 		retval = fuse_opt_add_arg(&args, "-osubtype=gitfs");

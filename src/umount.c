@@ -7,7 +7,6 @@
 
 struct umount_options
 {
-	const char *command;
 	const char *mountpoint;
 	int help;
 	int version;
@@ -32,7 +31,7 @@ static int umount_parse_opts(void *data, const char *arg, int key, struct fuse_a
 	{
 		default:
 		case FUSE_OPT_KEY_OPT:
-			fprintf(stderr, "%s: invalid option -- '%s'\n", options->command, arg);
+			fprintf(stderr, "gitfs umount: invalid option -- '%s'\n", arg);
 			return -1;
 
 		case FUSE_OPT_KEY_NONOPT:
@@ -41,7 +40,7 @@ static int umount_parse_opts(void *data, const char *arg, int key, struct fuse_a
 				options->mountpoint = arg;
 				return 0;
 			}
-			fprintf(stderr, "%s: invalid option -- '%s'\n", options->command, arg);
+			fprintf(stderr, "gitfs umount: invalid option -- '%s'\n", arg);
 			return -1;
 	}
 }
@@ -63,8 +62,6 @@ static int umount_main(int argc, char **argv)
 	struct fuse_args args = FUSE_ARGS_INIT(argc, argv);
 	int retval = 0;
 
-	options.command = argv[0];
-
 	if (retval == 0)
 		retval = fuse_opt_parse(&args, &options, cmdline_options, &umount_parse_opts);
 
@@ -82,7 +79,7 @@ static int umount_main(int argc, char **argv)
 
 	if (retval == 0 && !options.mountpoint)
 	{
-		fprintf(stderr, "%s: missing required argument: mountpoint\n", argv[0]);
+		fprintf(stderr, "gitfs umount: missing required argument: mountpoint\n");
 		return EXIT_FAILURE;
 	}
 
@@ -101,13 +98,13 @@ static int umount_main(int argc, char **argv)
 
 			retval = system(command);
 			if (retval == -1)
-				perror("system");
+				perror("gitfs umount: system");
 
 			free(command);
 		}
 		else
 		{
-			perror("malloc");
+			perror("gitfs umount: malloc");
 			retval = -1;
 		}
 	}
