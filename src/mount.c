@@ -7,7 +7,7 @@
 #include <git2.h>
 #include "gitfs.h"
 
-#define MOUNT_OPT(n,k,v) { n, offsetof(struct mount_options, k), v }
+#define MOUNT_OPT(n,k,v) { n, offsetof(struct mount_context, k), v }
 
 enum cmdline_option_keys
 {
@@ -16,7 +16,8 @@ enum cmdline_option_keys
 	KEY_HELP         = 0,
 	KEY_VERSION,
 	KEY_FOREGROUND,
-	KEY_DEBUG,
+	KEY_DEBUG_GITFS,
+	KEY_DEBUG_FUSE,
 	KEY_READONLY,
 	KEY_READWRITE
 };
@@ -31,8 +32,8 @@ static struct fuse_opt cmdline_options[] =
 		FUSE_OPT_KEY("-V", KEY_VERSION),
 		FUSE_OPT_KEY("--version", KEY_VERSION),
 		FUSE_OPT_KEY("-f", KEY_FOREGROUND),
-		FUSE_OPT_KEY("-d", KEY_DEBUG),
-		FUSE_OPT_KEY("debug", KEY_DEBUG),
+		FUSE_OPT_KEY("-d", KEY_DEBUG_GITFS),
+		FUSE_OPT_KEY("debug", KEY_DEBUG_FUSE),
 		FUSE_OPT_KEY("ro", KEY_READONLY),
 		FUSE_OPT_KEY("rw", KEY_READWRITE),
 
@@ -56,7 +57,7 @@ static void mount_help(const char *command)
 
 static int mount_parse_opts(void *data, const char *arg, int key, struct fuse_args *outargs)
 {
-	struct mount_options *options = (struct mount_options*)data;
+	struct mount_context *context = (struct mount_context*)data;
 
 	switch ((enum cmdline_option_keys)key)
 	{
@@ -64,10 +65,10 @@ static int mount_parse_opts(void *data, const char *arg, int key, struct fuse_ar
 			return 1;
 
 		case KEY_FUSE_NONOPT:
-			if (!options->repopath)
+			if (!context->repopath)
 			{
-				options->repopath = realpath(arg, NULL);
-				if (!options->repopath)
+				context->repopath = realpath(arg, NULL);
+				if (!context->repopath)
 				{
 					perror("gitfs mount: repopath invalid");
 					return -1;
@@ -77,30 +78,35 @@ static int mount_parse_opts(void *data, const char *arg, int key, struct fuse_ar
 			return 1;
 
 		case KEY_HELP:
-			options->skip_check = 1;
+			context->skip_check = 1;
 			mount_help(outargs->argv[0]);
 			return fuse_opt_add_arg(outargs, "-ho");
 
 		case KEY_VERSION:
-			options->skip_check = 1;
+			context->skip_check = 1;
 			print_version();
 			return 1;
 
 		case KEY_FOREGROUND:
-			options->foreground = 1;
+			context->foreground = 1;
 			return 1;
 
-		case KEY_DEBUG:
-			options->debug = 1;
-			options->foreground = 1;
+		case KEY_DEBUG_GITFS:
+			context->debug = 1;
+			context->foreground = 1;
+			return fuse_opt_add_arg(outargs, "-f");
+
+		case KEY_DEBUG_FUSE:
+			context->debug = 1;
+			context->foreground = 1;
 			return 1;
 
 		case KEY_READONLY:
-			options->readwrite = 0;
+			context->readwrite = 0;
 			return 1;
 
 		case KEY_READWRITE:
-			options->readwrite = 1;
+			context->readwrite = 1;
 			return 1;
 	}
 
@@ -108,57 +114,75 @@ static int mount_parse_opts(void *data, const char *arg, int key, struct fuse_ar
 	return -1;
 }
 
-static int check_options(const struct mount_options *options)
+static int check_context(struct mount_context *context)
 {
-	int retval = 0;
+	int giterr;
 
-	if (!options->repopath)
+	if (!context->repopath)
 	{
 		fprintf(stderr, "gitfs mount: missing required argument: /path/to/git/repo\n");
-		retval = -1;
+		return -1;
 	}
 
-	return retval;
+	if (context->debug)
+		printf("repository: searching for git at '%s'...\n", context->repopath);
+
+	giterr = git_repository_open_ext(&context->repository, context->repopath, 0, NULL);
+	if (giterr != 0)
+	{
+		if (giterr == GIT_ENOTFOUND)
+			fprintf(stderr, "gitfs mount: no git repository found at location\n");
+		else
+			fprintf(stderr, "gitfs mount: error opening git repository at location\n");
+		return -1;
+	}
+
+	if (context->debug)
+		printf("repository: located and opened at %s\n", git_repository_path(context->repository));
+
+	return 0;
 }
 
-static void free_options(struct mount_options *options)
+static void free_context(struct mount_context *context)
 {
-	free(options->repopath);
-	free(options->branch);
-	free(options->commit);
+	git_repository_free(context->repository);
+
+	free(context->repopath);
+	free(context->branch);
+	free(context->commit);
 }
 
 static int mount_main(int argc, char **argv)
 {
-	struct mount_options options = {};
+	struct mount_context context = {};
 	struct fuse_args args = FUSE_ARGS_INIT(argc, argv);
 	int retval = 0;
 
 	if (retval == 0)
-		retval = fuse_opt_parse(&args, &options, cmdline_options, &mount_parse_opts);
+		retval = fuse_opt_parse(&args, &context, cmdline_options, &mount_parse_opts);
 
-	if (retval == 0 && !options.skip_check)
-		retval = check_options(&options);
+	if (retval == 0 && !context.skip_check)
+		retval = check_context(&context);
 
 	if (retval == 0)
 		retval = fuse_opt_add_arg(&args, "-osubtype=gitfs");
 
-	if (retval == 0 && options.repopath != NULL)
+	if (retval == 0 && context.repopath != NULL)
 	{
-		int len = strlen(options.repopath);
+		int len = strlen(context.repopath);
 		char *buf = malloc(len + 10);
 		if (buf)
 		{
-			snprintf(buf, len + 10, "-ofsname=%s", options.repopath);
+			snprintf(buf, len + 10, "-ofsname=%s", context.repopath);
 			retval = fuse_opt_add_arg(&args, buf);
 			free(buf);
 		}
 	}
 
 	if (retval == 0)
-		retval = fuse_main(args.argc, args.argv, &gitfs_operations, &options);
+		retval = fuse_main(args.argc, args.argv, &gitfs_operations, &context);
 
-	free_options(&options);
+	free_context(&context);
 	return retval == 0 ? EXIT_SUCCESS : EXIT_FAILURE;
 }
 
