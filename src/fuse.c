@@ -57,8 +57,31 @@ static void gitfs_destroy(void *context_)
 	free(context->commit);
 }
 
+static int gitfs_getattr(const char *path, struct stat *st)
+{
+	GET_CONTEXT(context);
+
+	if (context->debug)
+		printf("%s: request for path '%s'\n", __func__, path);
+
+	if (strcmp(path, "/") == 0)
+	{
+		if (stat(git_repository_path(context->repository), st) == -1)
+			return -errno;
+
+		if (!context->writable)
+			st->st_mode &= ~(S_IWRITE | S_IWGRP | S_IWOTH);
+
+		return 0;
+	}
+
+	return -ENOENT;
+}
+
 struct fuse_operations gitfs_operations =
 {
 		.init = &gitfs_init,
 		.destroy = &gitfs_destroy,
+
+		.getattr = &gitfs_getattr,
 };
