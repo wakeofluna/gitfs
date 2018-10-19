@@ -124,8 +124,14 @@ static int check_context(struct mount_context *context)
 		return -1;
 	}
 
+	if (context->branch && context->commit)
+	{
+		fprintf(stderr, "gitfs mount: cannot provide both branch and commit\n");
+		return -1;
+	}
+
 	if (context->debug)
-		printf("repository: searching for git at '%s'...\n", context->repopath);
+		printf("mount: searching for git at '%s'...\n", context->repopath);
 
 	giterr = git_repository_open_ext(&context->repository, context->repopath, 0, NULL);
 	if (giterr != 0)
@@ -138,7 +144,7 @@ static int check_context(struct mount_context *context)
 	}
 
 	if (context->debug)
-		printf("repository: located and opened at %s\n", git_repository_path(context->repository));
+		printf("mount: located and opened at %s\n", git_repository_path(context->repository));
 
 	return 0;
 }

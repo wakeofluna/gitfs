@@ -5,9 +5,9 @@
 #define GITFS_VERSION_MINOR 0
 #define GITFS_VERSION ((GITFS_VERSION_MAJOR << 8) | GITFS_VERSION_MINOR)
 
-struct git_repository;
-
 void print_version(void);
+
+struct git_repository;
 
 struct mount_context
 {
@@ -22,7 +22,6 @@ struct mount_context
 	int debug;
 	int readwrite;
 
-	/* Runtime information */
 	struct git_repository *repository;
 };
 
