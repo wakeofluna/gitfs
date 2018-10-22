@@ -3,6 +3,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include "gitfs.h"
+#include "utils.h"
 
 struct gitfs_command
 {
@@ -15,11 +16,6 @@ static const struct gitfs_command commands[] = {
 		{ "umount", &gitfs_umount },
 		{ NULL }
 };
-
-void print_version(void)
-{
-	printf("gitfs version: %d.%d\n", GITFS_VERSION_MAJOR, GITFS_VERSION_MINOR);
-}
 
 static void print_usage(const char *argv0)
 {

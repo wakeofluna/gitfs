@@ -6,6 +6,7 @@
 #include <fuse.h>
 #include <git2.h>
 #include "gitfs.h"
+#include "utils.h"
 
 #define MOUNT_OPT(n,k,v) { n, offsetof(struct mount_context, k), v }
 

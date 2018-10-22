@@ -3,6 +3,7 @@ set(SOURCE_FILES
 	gitfs.c
 	mount.c
 	umount.c
+	utils.c
 )
 
 find_package(PkgConfig)
