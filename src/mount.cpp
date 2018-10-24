@@ -177,7 +177,7 @@ static int mount_main(int argc, char **argv)
 	if (retval == 0 && context.repopath != NULL)
 	{
 		int len = strlen(context.repopath);
-		char *buf = malloc(len + 10);
+		char *buf = (char*) malloc(len + 10);
 		if (buf)
 		{
 			snprintf(buf, len + 10, "-ofsname=%s", context.repopath);

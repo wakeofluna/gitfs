@@ -4,6 +4,7 @@
 #include <string.h>
 #include <fuse.h>
 #include "gitfs.h"
+#include "utils.h"
 
 struct umount_options
 {
@@ -90,7 +91,7 @@ static int umount_main(int argc, char **argv)
 		int len = strlen(options.mountpoint);
 		const int command_len = len + sizeof(command_template);
 
-		char *command = malloc(command_len);
+		char *command = (char*) malloc(command_len);
 		if (command)
 		{
 			snprintf(command, command_len, command_template, options.mountpoint);

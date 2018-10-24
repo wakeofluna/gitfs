@@ -34,7 +34,7 @@ static void *gitfs_init(struct fuse_conn_info *conn)
 	struct mount_context *mount_context = (struct mount_context *)fuse_context->private_data;
 	struct gitfs_context *context;
 
-	context = malloc(sizeof(struct gitfs_context));
+	context = (struct gitfs_context*) malloc(sizeof(struct gitfs_context));
 	if (!context)
 	{
 		perror("init: malloc");
