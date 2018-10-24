@@ -76,10 +76,15 @@ static void gitfs_destroy(void *context_)
 static int gitfs_getattr(const char *path, struct stat *st)
 {
 	time_t now;
+	git_oid oid = {};
+	int len;
 	GET_CONTEXT(context);
 
 	if (context->debug)
-		printf("%s: request for path '%s'\n", __func__, path);
+		printf("%s: request for path '%s'\n", __func__, path ? path : "(null)");
+
+	if (!path || path[0] != '/')
+		return -ENOENT;
 
 	now = get_current_time();
 	if (now > context->root_stat_refresh)
@@ -87,16 +92,48 @@ static int gitfs_getattr(const char *path, struct stat *st)
 		if (stat(git_repository_path(context->repository), &context->root_stat_cache) == -1)
 			return -errno;
 
+		context->root_stat_cache.st_mode &= ~S_IFMT;
+		if (!context->writable)
+			context->root_stat_cache.st_mode &= ~(S_IWRITE | S_IWGRP | S_IWOTH);
+
 		context->root_stat_refresh = now + 30;
 	}
 
-	if (strcmp(path, "/") == 0)
+	if (path[1] == 0)
 	{
 		*st = context->root_stat_cache;
-		if (!context->writable)
-			st->st_mode &= ~(S_IWRITE | S_IWGRP | S_IWOTH);
-
+		st->st_mode |= S_IFDIR;
 		return 0;
+	}
+
+	len = strlen(path+1);
+	if (len >= GIT_OID_MINPREFIXLEN && git_oid_fromstrn(&oid, path+1, len) == 0)
+	{
+		git_object *object;
+
+		if (context->debug)
+			printf("%s: '%s' is a possible oid, checking...\n", __func__, path+1);
+
+		if (git_object_lookup_prefix(&object, context->repository, &oid, len, GIT_OBJ_ANY) == 0)
+		{
+			git_otype otype;
+			otype = git_object_type(object);
+
+			if (context->debug)
+			{
+				char buf[GIT_OID_HEXSZ+1];
+				git_oid_nfmt(buf, sizeof(buf), git_object_id(object));
+				printf("%s: '%s' is object of type %d\n", __func__, buf, (int)otype);
+			}
+
+			if (otype == GIT_OBJ_BLOB)
+				st->st_mode |= S_IFREG;
+			else
+				st->st_mode |= S_IFDIR;
+
+			git_object_free(object);
+			return 0;
+		}
 	}
 
 	return -ENOENT;
@@ -112,12 +149,78 @@ static int gitfs_opendir(const char *path, struct fuse_file_info *file_info)
 	return 0;
 }
 
-static int gitfs_readdir(const char *path, void *data, fuse_fill_dir_t filler, off_t filler_offset, struct fuse_file_info *file_info)
+static int gitfs_readdir(const char *path, void *buf, fuse_fill_dir_t filler, off_t filler_offset, struct fuse_file_info *file_info)
 {
 	GET_CONTEXT(context);
 
 	if (context->debug)
-		printf("%s: request for path '%s'\n", __func__, path);
+		printf("%s: request for path '%s' with flags 0x%x\n", __func__, path, file_info->flags);
+
+	(*filler)(buf, ".", NULL, 0);
+	(*filler)(buf, "..", NULL, 0);
+
+	if (strcmp(path, "/") == 0)
+	{
+		int retval;
+		git_reference_iterator *iter = NULL;
+		char *last_dir = NULL;
+		size_t last_dir_len = 0;
+
+		retval = git_reference_iterator_new(&iter, context->repository);
+		if (retval != GIT_OK)
+			return -EIO;
+
+		while (1)
+		{
+			git_reference *ref;
+			const char *shorthand;
+			const char *slash;
+
+			retval = git_reference_next(&ref, iter);
+			if (retval != GIT_OK)
+				break;
+
+			shorthand = git_reference_shorthand(ref);
+			slash = strchr(shorthand, '/');
+			if (slash)
+			{
+				size_t len = slash - shorthand;
+				if (last_dir == NULL || len != last_dir_len || memcmp(last_dir, shorthand, len) != 0)
+				{
+					free(last_dir);
+					last_dir = strndup(shorthand, len);
+					last_dir_len = len;
+					(*filler)(buf, last_dir, NULL, 0);
+					if (context->debug)
+						printf("Adding %s as path %s\n", shorthand, last_dir);
+				}
+				else
+				{
+					if (context->debug)
+						printf("Skipping %s, path already handled\n", shorthand);
+				}
+			}
+			else
+			{
+				if (context->debug)
+					printf("Adding %s\n", shorthand);
+				(*filler)(buf, shorthand, NULL, 0);
+			}
+
+			git_reference_free(ref);
+		}
+
+		git_reference_iterator_free(iter);
+		free(last_dir);
+
+		if (retval != GIT_ITEROVER)
+		{
+			printf("%s: error iterating over branches: %s\n", __func__, giterr_last()->message);
+			return -EIO;
+		}
+
+		return 0;
+	}
 
 	return 0;
 }
