@@ -1,6 +1,8 @@
 #ifndef GITFS_H_
 #define GITFS_H_
 
+#include <string>
+
 #define GITFS_VERSION_MAJOR 1
 #define GITFS_VERSION_MINOR 0
 #define GITFS_VERSION ((GITFS_VERSION_MAJOR << 8) | GITFS_VERSION_MINOR)

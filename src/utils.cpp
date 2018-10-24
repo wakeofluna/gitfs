@@ -1,11 +1,11 @@
-#include <stdio.h>
-#include <time.h>
+#include <cstdio>
+#include <ctime>
 #include "gitfs.h"
 #include "utils.h"
 
 void print_version(void)
 {
-	printf("gitfs version: %d.%d\n", GITFS_VERSION_MAJOR, GITFS_VERSION_MINOR);
+	std::printf("gitfs version: %d.%d\n", GITFS_VERSION_MAJOR, GITFS_VERSION_MINOR);
 }
 
 time_t get_current_time(void)
@@ -29,5 +29,5 @@ time_t get_current_time(void)
 		time_method = 2;
 	}
 
-	return time(NULL);
+	return time(nullptr);
 }

@@ -1,8 +1,8 @@
-#include <assert.h>
-#include <stddef.h>
-#include <stdlib.h>
-#include <stdio.h>
-#include <string.h>
+#include <cassert>
+#include <cstddef>
+#include <cstdlib>
+#include <cstdio>
+#include <cstring>
 #include <fuse.h>
 #include <git2.h>
 #include "gitfs.h"
@@ -38,13 +38,13 @@ static struct fuse_opt cmdline_options[] =
 		FUSE_OPT_KEY("ro", KEY_READONLY),
 		FUSE_OPT_KEY("rw", KEY_READWRITE),
 
-		{ NULL }
+		{ nullptr }
 };
 
 static void mount_help(const char *command)
 {
-	fprintf(stderr, "%s: %s\n", command, gitfs_mount.description);
-	fprintf(stderr,
+	std::fprintf(stderr, "%s: %s\n", command, gitfs_mount.description);
+	std::fprintf(stderr,
 			"\nusage: gitfs mount <path/to/git/repo> <mountpoint> [options]\n"
 			"\ngeneral options:\n"
 			"    -o opt[,opt...]        mount options\n"
@@ -68,10 +68,10 @@ static int mount_parse_opts(void *data, const char *arg, int key, struct fuse_ar
 		case KEY_FUSE_NONOPT:
 			if (!context->repopath)
 			{
-				context->repopath = realpath(arg, NULL);
+				context->repopath = realpath(arg, nullptr);
 				if (!context->repopath)
 				{
-					perror("gitfs mount: repopath invalid");
+					std::perror("gitfs mount: repopath invalid");
 					return -1;
 				}
 				return 0;
@@ -111,7 +111,7 @@ static int mount_parse_opts(void *data, const char *arg, int key, struct fuse_ar
 			return 1;
 	}
 
-	fprintf(stderr, "gitfs mount: unhandled option: (%d) %s\n", key, arg);
+	std::fprintf(stderr, "gitfs mount: unhandled option: (%d) %s\n", key, arg);
 	return -1;
 }
 
@@ -121,31 +121,31 @@ static int check_context(struct mount_context *context)
 
 	if (!context->repopath)
 	{
-		fprintf(stderr, "gitfs mount: missing required argument: /path/to/git/repo\n");
+		std::fprintf(stderr, "gitfs mount: missing required argument: /path/to/git/repo\n");
 		return -1;
 	}
 
 	if (context->branch && context->commit)
 	{
-		fprintf(stderr, "gitfs mount: cannot provide both branch and commit\n");
+		std::fprintf(stderr, "gitfs mount: cannot provide both branch and commit\n");
 		return -1;
 	}
 
 	if (context->debug)
-		printf("mount: searching for git at '%s'...\n", context->repopath);
+		std::printf("mount: searching for git at '%s'...\n", context->repopath);
 
-	giterr = git_repository_open_ext(&context->repository, context->repopath, 0, NULL);
+	giterr = git_repository_open_ext(&context->repository, context->repopath, 0, nullptr);
 	if (giterr != 0)
 	{
 		if (giterr == GIT_ENOTFOUND)
-			fprintf(stderr, "gitfs mount: no git repository found at location\n");
+			std::fprintf(stderr, "gitfs mount: no git repository found at location\n");
 		else
-			fprintf(stderr, "gitfs mount: error opening git repository at location\n");
+			std::fprintf(stderr, "gitfs mount: error opening git repository at location\n");
 		return -1;
 	}
 
 	if (context->debug)
-		printf("mount: located and opened at %s\n", git_repository_path(context->repository));
+		std::printf("mount: located and opened at %s\n", git_repository_path(context->repository));
 
 	return 0;
 }
@@ -174,15 +174,15 @@ static int mount_main(int argc, char **argv)
 	if (retval == 0)
 		retval = fuse_opt_add_arg(&args, "-osubtype=gitfs");
 
-	if (retval == 0 && context.repopath != NULL)
+	if (retval == 0 && context.repopath != nullptr)
 	{
-		int len = strlen(context.repopath);
-		char *buf = (char*) malloc(len + 10);
+		int len = std::strlen(context.repopath);
+		char *buf = new char[len + 10];
 		if (buf)
 		{
-			snprintf(buf, len + 10, "-ofsname=%s", context.repopath);
+			std::snprintf(buf, len + 10, "-ofsname=%s", context.repopath);
 			retval = fuse_opt_add_arg(&args, buf);
-			free(buf);
+			delete[] buf;
 		}
 	}
 

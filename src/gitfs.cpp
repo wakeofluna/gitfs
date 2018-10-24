@@ -1,7 +1,7 @@
-#include <assert.h>
-#include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
+#include <cassert>
+#include <cstdio>
+#include <cstdlib>
+#include <cstring>
 #include "gitfs.h"
 #include "utils.h"
 
@@ -23,28 +23,28 @@ static void print_usage(const char *argv0)
 	int maxlen = 0;
 
 	print_version();
-	printf("\nUsage:\n");
-	printf("    %s -h [command]\n", argv0);
-	printf("    %s <command> -h\n", argv0);
-	printf("    %s <command> ...\n", argv0);
-	printf("\nMount, unmount or interact with a git repository\n");
-	printf("\nOptions:\n");
-	printf("    -h  Display help about the specified command\n");
-	printf("\nList of commands:\n");
+	std::printf("\nUsage:\n");
+	std::printf("    %s -h [command]\n", argv0);
+	std::printf("    %s <command> -h\n", argv0);
+	std::printf("    %s <command> ...\n", argv0);
+	std::printf("\nMount, unmount or interact with a git repository\n");
+	std::printf("\nOptions:\n");
+	std::printf("    -h  Display help about the specified command\n");
+	std::printf("\nList of commands:\n");
 
 	for (command = commands; command->name != NULL; ++command)
 	{
-		int len = strlen(command->name);
+		int len = std::strlen(command->name);
 		if (len > maxlen)
 			maxlen = len;
 	}
 
 	for (command = commands; command->name != NULL; ++command)
 	{
-		printf("    %-*s  %s\n", maxlen, command->name, command->function->description);
+		std::printf("    %-*s  %s\n", maxlen, command->name, command->function->description);
 	}
 
-	printf("\n");
+	std::printf("\n");
 }
 
 static int main_normal(int argc, char **argv)
@@ -58,18 +58,18 @@ static int main_normal(int argc, char **argv)
 		if (argv[idx][0] != '-')
 			break;
 
-		if (strcmp(argv[idx], "-h") == 0 || strcmp(argv[idx], "--help") == 0)
+		if (std::strcmp(argv[idx], "-h") == 0 || std::strcmp(argv[idx], "--help") == 0)
 		{
 			has_help = idx;
 		}
-		else if (strcmp(argv[idx], "-V") == 0 || strcmp(argv[idx], "--version") == 0)
+		else if (std::strcmp(argv[idx], "-V") == 0 || std::strcmp(argv[idx], "--version") == 0)
 		{
 			print_version();
 			return EXIT_SUCCESS;
 		}
 		else
 		{
-			fprintf(stderr, "%s: invalid option -- '%s'\n", argv[0], argv[idx]);
+			std::fprintf(stderr, "%s: invalid option -- '%s'\n", argv[0], argv[idx]);
 			return EXIT_FAILURE;
 		}
 	}
@@ -82,13 +82,13 @@ static int main_normal(int argc, char **argv)
 
 	for (command = commands; command->name != NULL; ++command)
 	{
-		if (strcmp(argv[idx], command->name) == 0)
+		if (std::strcmp(argv[idx], command->name) == 0)
 			break;
 	}
 
 	if (command->name == NULL)
 	{
-		fprintf(stderr, "gitfs: invalid command: %s\n", argv[idx]);
+		std::fprintf(stderr, "gitfs: invalid command: %s\n", argv[idx]);
 		return EXIT_FAILURE;
 	}
 
@@ -116,14 +116,14 @@ static int main_shortcircuit(int argc, char **argv, const char *function, const 
 
 	for (command = commands; command->name != NULL; ++command)
 	{
-		int len = strlen(command->name);
-		if (len == function_len && memcmp(function, command->name, len) == 0)
+		int len = std::strlen(command->name);
+		if (len == function_len && std::memcmp(function, command->name, len) == 0)
 			break;
 	}
 
 	if (command->name == NULL)
 	{
-		fprintf(stderr, "gitfs: invalid command: %.*s\n", function_len, function);
+		std::fprintf(stderr, "gitfs: invalid command: %.*s\n", function_len, function);
 		return EXIT_FAILURE;
 	}
 
@@ -140,19 +140,15 @@ int main(int argc, char **argv)
 	if (argc < 1)
 		return EXIT_FAILURE;
 
-	pos_start = strrchr(argv[0], '/');
+	pos_start = std::strrchr(argv[0], '/');
 	if (pos_start == NULL)
 		pos_start = argv[0];
 	else
 		++pos_start;
 
-	pos_dot = strchr(pos_start, '.');
+	pos_dot = std::strchr(pos_start, '.');
 	if (pos_dot)
-	{
 		return main_shortcircuit(argc, argv, pos_start, pos_dot);
-	}
-	else
-	{
-		return main_normal(argc, argv);
-	}
+
+	return main_normal(argc, argv);
 }
