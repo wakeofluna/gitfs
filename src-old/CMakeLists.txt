@@ -1,5 +1,9 @@
 set(SOURCE_FILES
-	main.cpp
+	fuse.cpp
+	gitfs.cpp
+	mount.cpp
+	umount.cpp
+	utils.cpp
 )
 
 find_package(PkgConfig)
