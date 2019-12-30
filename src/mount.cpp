@@ -5,11 +5,10 @@
 #include "gitfs.h"
 #include "command_line.h"
 #include "mount_context.h"
+#include "git_context.h"
 
 namespace
 {
-
-struct fuse_operations operations = {};
 
 enum cmdline_option_keys
 {
@@ -134,6 +133,7 @@ int mount_main(int argc, char **argv)
 	}
 	cmdline.pushArg("-odefault_permissions");
 	cmdline.pushArg("-onoatime");
+	cmdline.pushArg("-oauto_unmount");
 
 	if (!git_libgit2_init())
 	{
@@ -155,7 +155,7 @@ int mount_main(int argc, char **argv)
 	if (mountcontext.debug)
 		std::cout << "mount: located and opened at " << git_repository_path(mountcontext.repository) << std::endl;
 
-	int result = fuse_main(cmdline.args()->argc, cmdline.args()->argv, &operations, &mountcontext);
+	int result = fuse_main(cmdline.args()->argc, cmdline.args()->argv, GitContext::fuseOperations(), &mountcontext);
 	if (result == 2) // No mount point specified
 		mount_main_cmdhelp();
 

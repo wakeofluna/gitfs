@@ -1,6 +1,8 @@
 set(SOURCE_FILES
 	command_line.cpp
 	git_context.cpp
+	git_wrappers.cpp
+	logger.cpp
 	main.cpp
 	mount_context.cpp
 	mount.cpp

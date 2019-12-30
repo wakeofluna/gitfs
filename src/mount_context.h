@@ -14,7 +14,7 @@ struct MountContext
 	std::string commit;
 	bool foreground = false;
 	bool debug = false;
-	bool readwrite = false;
+	bool readwrite = true;
 };
 
 #endif // MOUNT_CONTEXT_H_
