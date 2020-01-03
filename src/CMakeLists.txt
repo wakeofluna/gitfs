@@ -1,5 +1,10 @@
 set(SOURCE_FILES
 	command_line.cpp
+	fs_branch.cpp
+	fs_entry.cpp
+	fs_pseudo_directory.cpp
+	fs_pseudo_entry.cpp
+	fs_root.cpp
 	git_context.cpp
 	git_wrappers.cpp
 	logger.cpp

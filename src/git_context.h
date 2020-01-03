@@ -4,6 +4,7 @@
 #include <string>
 #include <sys/types.h>
 #include <map>
+#include <memory>
 #include <mutex>
 #include "git_wrappers.h"
 
@@ -11,6 +12,8 @@ struct fuse_operations;
 struct fuse_conn_info;
 struct fuse_config;
 struct MountContext;
+class FSRoot;
+struct FileInfo;
 
 struct GitContext
 {
@@ -32,18 +35,13 @@ struct GitContext
 	mode_t umask;
 	time_t atime;
 
-	class FileInfo;
-	using FileInfoKey = decltype(fuse_file_info::fh);
-	using FileInfoMap = std::map<FileInfoKey, FileInfo*>;
-	using PathInfoMap = std::map<FileInfoKey, std::string>;
-	using PathMap = std::map<std::string_view, FileInfoKey>;
-	FileInfoMap fileInfoMap;
-	PathInfoMap pathInfoMap;
-	PathMap pathMap;
-	FileInfoKey pathPseudoKey;
-	std::mutex pathMutex;
+	std::shared_ptr<FSRoot> root;
 
-	std::pair<GitCommit, std::string_view> decypherPath(const std::string_view & path);
+	using FileInfoKey = decltype(fuse_file_info::fh);
+	using FileInfoMap = std::map<FileInfoKey, std::shared_ptr<FileInfo>>;
+	FileInfoMap fileInfo;
+	FileInfoKey fileInfoKey;
+	std::mutex fileInfoLock;
 
 	static void* _fuse_init(fuse_conn_info *conn, fuse_config *cfg);
 	static void _fuse_destroy(void *private_data);
