@@ -33,8 +33,11 @@ void FSRoot::rebuildRefs(GitRepository & repo)
 			return 0;
 
 		FSEntry * current = this;
+		unsigned int depth = 0;
 		while (true)
 		{
+			++depth;
+
 			auto nextSep = ref.find('/');
 			std::string_view segment = ref.substr(0, nextSep);
 			ref = (nextSep == ref.npos ? std::string_view() : ref.substr(nextSep+1));
@@ -43,7 +46,7 @@ void FSRoot::rebuildRefs(GitRepository & repo)
 			int retval = current->getChild(segment, nextEntry);
 			if (retval == -ENOENT)
 			{
-				nextEntry = std::make_shared<FSBranch>(std::string(segment));
+				nextEntry = std::make_shared<FSBranch>(std::string(segment), depth);
 				current->addChild(nextEntry);
 				retval = 0;
 			}
@@ -55,6 +58,7 @@ void FSRoot::rebuildRefs(GitRepository & repo)
 			}
 
 			current = nextEntry.get();
+			current->setUnlinked(false);
 			if (ref.empty())
 			{
 				FSBranch *branch = current->cast<FSBranch>();

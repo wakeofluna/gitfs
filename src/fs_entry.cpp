@@ -35,3 +35,8 @@ int FSEntry::enumerateChildren(const EnumerateFunction & callback, off_t start, 
 {
 	return -ENOTDIR;
 }
+
+int FSEntry::readLink(char * buffer, size_t bufsize) const
+{
+	return -EINVAL;
+}

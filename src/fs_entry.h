@@ -47,6 +47,9 @@ public:
 	virtual int addChild(const std::shared_ptr<FSEntry> & entry, bool allowReplace = false);
 	virtual int removeChild(const std::string_view & name);
 	virtual int enumerateChildren(const EnumerateFunction & callback, off_t start, struct stat *st) const;
+
+	/* Optional support for symbolic links */
+	virtual int readLink(char * buffer, size_t bufsize) const;
 };
 
 using FSEntryPtr = std::shared_ptr<FSEntry>;

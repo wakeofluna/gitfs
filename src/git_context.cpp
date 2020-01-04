@@ -30,6 +30,7 @@ constexpr fuse_operations _operations = {
 	.init = &GitContext::_fuse_init,
 	.destroy = &GitContext::_fuse_destroy,
 	.getattr = &GitContext::_fuse_getattr,
+	.readlink = &GitContext::_fuse_readlink,
 	.opendir = &GitContext::_fuse_opendir,
 	.readdir = &GitContext::_fuse_readdir,
 	.releasedir = &GitContext::_fuse_releasedir,
@@ -224,6 +225,32 @@ int GitContext::fuse_getattr(std::string_view path, struct stat *st, struct fuse
 			entries.back()->fillStat(st);
 			st->st_mode &= umask;
 		}
+	}
+
+	return retval;
+}
+
+int GitContext::_fuse_readlink(const char *path, char *buf, size_t bufsize)
+{
+	if (!path || !buf || !bufsize)
+		return -EINVAL;
+
+	return inContext(&GitContext::fuse_readlink, std::string_view(path), buf, bufsize);
+}
+
+int GitContext::fuse_readlink(std::string_view path, char *buf, size_t bufsize)
+{
+	int retval = -ENOENT;
+
+	Logger log(retval, debug);
+	log << "readlink: path=" << path << " bufsize=" << bufsize << Logger::retval;
+
+	if (!path.empty() && path.front() == '/')
+	{
+		FSEntryVector entries;
+		retval = resolvePath(root, path.substr(1), entries);
+		if (retval == 0)
+			retval = entries.back()->readLink(buf, bufsize);
 	}
 
 	return retval;

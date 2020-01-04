@@ -1,6 +1,7 @@
 set(SOURCE_FILES
 	command_line.cpp
 	fs_branch.cpp
+	fs_commit_link.cpp
 	fs_entry.cpp
 	fs_pseudo_directory.cpp
 	fs_pseudo_entry.cpp

@@ -48,6 +48,8 @@ struct GitContext
 
 	static int _fuse_getattr(const char *path, struct stat *st, fuse_file_info *fi);
 	int fuse_getattr(std::string_view path, struct stat *st, fuse_file_info *fi);
+	static int _fuse_readlink(const char *path, char *buf, size_t bufsize);
+	int fuse_readlink(std::string_view path, char *buf, size_t bufsize);
 
 	static int _fuse_opendir(const char *path, fuse_file_info *fi);
 	static int _fuse_readdir(const char *path, void *fusebuf, fuse_fill_dir_t fillfunc, off_t offset, fuse_file_info *fi, fuse_readdir_flags flags);

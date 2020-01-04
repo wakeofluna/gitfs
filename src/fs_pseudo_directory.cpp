@@ -23,7 +23,7 @@ int FSPseudoDirectory::getChild(const std::string_view & name, std::shared_ptr<F
 	std::lock_guard<std::recursive_mutex> guard(gLock);
 
 	auto iter = mEntries.find(name);
-	if (iter == mEntries.cend())
+	if (iter == mEntries.cend() || iter->second->isUnlinked())
 	{
 		target.reset();
 		return -ENOENT;
@@ -84,11 +84,14 @@ int FSPseudoDirectory::enumerateChildren(const EnumerateFunction & callback, off
 
 	while (iter != end && retval == 0)
 	{
-		++index;
-		if (index > start)
+		if (!iter->second->isUnlinked())
 		{
-			iter->second->fillStat(st);
-			retval = callback(iter->first.data(), index, st);
+			++index;
+			if (index > start)
+			{
+				iter->second->fillStat(st);
+				retval = callback(iter->first.data(), index, st);
+			}
 		}
 		++iter;
 	}

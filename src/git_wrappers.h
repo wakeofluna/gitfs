@@ -10,7 +10,9 @@ class GitReference;
 class GitReferenceIterator;
 class GitBlob;
 class GitCommit;
+class GitTag;
 class GitTree;
+class GitObject;
 
 #define WRAP(clz,typ,freefunc) \
 public: \
@@ -34,9 +36,11 @@ class GitRepository
 WRAP(GitRepository, git_repository, git_repository_free);
 public:
 	GitReference head() const;
-	GitReference resolve(const char *shorthand) const;
+	GitReference resolveReference(const char *shorthand) const;
 	GitBlob resolveBlob(const git_oid * oid) const;
 	GitCommit resolveCommit(const git_oid * oid) const;
+	GitObject resolveObject(const git_oid * oid, git_object_t type = GIT_OBJECT_ANY) const;
+	GitTag resolveTag(const git_oid * oid) const;
 	GitTree resolveTree(const git_oid * oid) const;
 	int forEachReference(const std::function<int(GitReference &)> & func) const;
 	int forEachReference(const std::function<int(const char *)> & func) const;
@@ -78,12 +82,32 @@ class GitCommit
 {
 WRAP(GitCommit, git_commit, git_commit_free);
 public:
+	git_repository *owner() const;
+	const git_oid *id() const;
+	const git_oid *parentId(unsigned int parentNr = 0) const;
+	unsigned int parentCount() const;
+	GitObject object() const;
 	git_time_t time() const;
+};
+
+class GitTag
+{
+WRAP(GitTag, git_tag, git_tag_free);
 };
 
 class GitTree
 {
 WRAP(GitTree, git_tree, git_tree_free);
+};
+
+class GitObject
+{
+WRAP(GitObject, git_object, git_object_free);
+public:
+	const git_oid *id() const;
+	std::string shortId() const;
+	git_object_t type() const;
+	GitObject peel(git_object_t type) const;
 };
 
 
