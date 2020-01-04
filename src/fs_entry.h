@@ -51,6 +51,9 @@ public:
 
 	/* Optional support for symbolic links */
 	virtual int readLink(char * buffer, size_t bufsize) const;
+
+	/* Optional support for reading data */
+	virtual int read(char * buffer, size_t bufsize, off_t offset) const;
 };
 
 using FSEntryPtr = std::shared_ptr<FSEntry>;

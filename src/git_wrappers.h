@@ -110,6 +110,7 @@ public:
 	GitRepositoryView owner() const;
 	const git_oid *id() const;
 	off_t size() const;
+	const void *content() const;
 };
 WRAPVIEW(GitBlob, git_blob, git_blob_free);
 

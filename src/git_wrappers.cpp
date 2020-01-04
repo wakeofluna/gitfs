@@ -176,6 +176,11 @@ off_t GitBlobView::size() const
 	return (data ? git_blob_rawsize(data) : 0);
 }
 
+const void *GitBlobView::content() const
+{
+	return (data ? git_blob_rawcontent(data) : nullptr);
+}
+
 GitRepositoryView GitCommitView::owner() const
 {
 	return (data ? git_commit_owner(data) : nullptr);

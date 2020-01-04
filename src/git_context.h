@@ -51,12 +51,14 @@ struct GitContext
 	static int _fuse_readlink(const char *path, char *buf, size_t bufsize);
 	int fuse_readlink(std::string_view path, char *buf, size_t bufsize);
 
-	static int _fuse_opendir(const char *path, fuse_file_info *fi);
+	static int _fuse_open(const char *path, struct fuse_file_info *fi);
+	static int _fuse_read(const char *path, char *buffer, size_t bufsize, off_t offset, struct fuse_file_info *fi);
 	static int _fuse_readdir(const char *path, void *fusebuf, fuse_fill_dir_t fillfunc, off_t offset, fuse_file_info *fi, fuse_readdir_flags flags);
-	static int _fuse_releasedir(const char *path, struct fuse_file_info *fi);
-	int fuse_opendir(std::string_view path, struct fuse_file_info *fi);
+	static int _fuse_release(const char *path, struct fuse_file_info *fi);
+	int fuse_open(std::string_view path, struct fuse_file_info *fi);
+	int fuse_read(char *buffer, size_t bufsize, off_t offset, struct fuse_file_info *fi);
 	int fuse_readdir(void *fusebuf, fuse_fill_dir_t fillfunc, off_t offset, struct fuse_file_info *fi, fuse_readdir_flags flags);
-	int fuse_releasedir(struct fuse_file_info *fi);
+	int fuse_release(struct fuse_file_info *fi);
 };
 
 #define IN_CONTEXT(x,func) \

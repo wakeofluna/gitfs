@@ -31,9 +31,12 @@ constexpr fuse_operations _operations = {
 	.destroy = &GitContext::_fuse_destroy,
 	.getattr = &GitContext::_fuse_getattr,
 	.readlink = &GitContext::_fuse_readlink,
-	.opendir = &GitContext::_fuse_opendir,
+	.open = &GitContext::_fuse_open,
+	.read = &GitContext::_fuse_read,
+	.release = &GitContext::_fuse_release,
+	.opendir = &GitContext::_fuse_open,
 	.readdir = &GitContext::_fuse_readdir,
-	.releasedir = &GitContext::_fuse_releasedir,
+	.releasedir = &GitContext::_fuse_release,
 };
 
 template <typename ...ARGS>
@@ -252,12 +255,20 @@ int GitContext::fuse_readlink(std::string_view path, char *buf, size_t bufsize)
 	return retval;
 }
 
-int GitContext::_fuse_opendir(const char *path, struct fuse_file_info *fi)
+int GitContext::_fuse_open(const char *path, struct fuse_file_info *fi)
 {
 	if (!path || !fi)
 		return -EINVAL;
 
-	return inContext(&GitContext::fuse_opendir, std::string_view(path), fi);
+	return inContext(&GitContext::fuse_open, std::string_view(path), fi);
+}
+
+int GitContext::_fuse_read(const char *path, char *buffer, size_t bufsize, off_t offset, struct fuse_file_info *fi)
+{
+	if (!buffer || !bufsize || !fi)
+		return -EINVAL;
+
+	return inContext(&GitContext::fuse_read, buffer, bufsize, offset, fi);
 }
 
 int GitContext::_fuse_readdir(const char *path, void *fusebuf, fuse_fill_dir_t fillfunc, off_t offset, struct fuse_file_info *fi, enum fuse_readdir_flags flags)
@@ -268,32 +279,25 @@ int GitContext::_fuse_readdir(const char *path, void *fusebuf, fuse_fill_dir_t f
 	return inContext(&GitContext::fuse_readdir, fusebuf, fillfunc, offset, fi, flags);
 }
 
-int GitContext::_fuse_releasedir(const char *path, struct fuse_file_info *fi)
+int GitContext::_fuse_release(const char *path, struct fuse_file_info *fi)
 {
 	if (!fi)
 		return -EINVAL;
 
-	return inContext(&GitContext::fuse_releasedir, fi);
+	return inContext(&GitContext::fuse_release, fi);
 }
 
-int GitContext::fuse_opendir(std::string_view path, struct fuse_file_info *fi)
+int GitContext::fuse_open(std::string_view path, struct fuse_file_info *fi)
 {
 	int retval = -ENOENT;
 
 	Logger log(retval, debug);
-	log << "opendir: path=" << path << Logger::retval;
+	log << "open: path=" << path << Logger::retval;
 
 	if (!path.empty() && path.front() == '/')
 	{
 		FSEntryVector entries;
 		retval = resolvePath(root, path.substr(1), entries);
-		if (retval == 0)
-		{
-			struct stat st;
-			entries.back()->fillStat(&st);
-			if (!S_ISDIR(st.st_mode))
-				retval = -ENOTDIR;
-		}
 		if (retval == 0)
 		{
 			std::shared_ptr<FileInfo> info = std::make_shared<FileInfo>();
@@ -307,6 +311,29 @@ int GitContext::fuse_opendir(std::string_view path, struct fuse_file_info *fi)
 	}
 
 	log << " handle=" << fi->fh;
+	return retval;
+}
+
+int GitContext::fuse_read(char *buffer, size_t bufsize, off_t offset, struct fuse_file_info *fi)
+{
+	int retval = -EINVAL;
+
+	Logger log(retval, debug);
+	log << "read: handle=" << fi->fh << " bufsize=" << bufsize << " offset=" << offset << Logger::retval;
+
+	std::shared_ptr<FileInfo> info;
+
+	std::unique_lock<std::mutex> guard(fileInfoLock);
+	auto iter = fileInfo.find(fi->fh);
+	if (iter != fileInfo.end())
+		info = iter->second;
+	guard.unlock();
+
+	if (info)
+	{
+		retval = info->stack.back()->read(buffer, bufsize, offset);
+	}
+
 	return retval;
 }
 
@@ -348,16 +375,7 @@ int GitContext::fuse_readdir(void *fusebuf, fuse_fill_dir_t fillfunc, off_t offs
 
 		if (index == 1)
 		{
-			if (info->stack.size() >= 2)
-			{
-				info->stack[info->stack.size() - 2]->fillStat(&st);
-				st.st_mode &= umask;
-				fillfunc(fusebuf, "..", &st, 2, fuse_fill_dir_flags(FUSE_FILL_DIR_PLUS));
-			}
-			else
-			{
-				fillfunc(fusebuf, "..", nullptr, 2, fuse_fill_dir_flags(0));
-			}
+			fillfunc(fusebuf, "..", nullptr, 2, fuse_fill_dir_flags(0));
 			index = 2;
 		}
 
@@ -371,7 +389,7 @@ int GitContext::fuse_readdir(void *fusebuf, fuse_fill_dir_t fillfunc, off_t offs
 	return retval;
 }
 
-int GitContext::fuse_releasedir(struct fuse_file_info *fi)
+int GitContext::fuse_release(struct fuse_file_info *fi)
 {
 	int retval = -EINVAL;
 

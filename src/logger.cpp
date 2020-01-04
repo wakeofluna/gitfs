@@ -168,7 +168,7 @@ void Logger::outputRetval()
 	else if (retvalRef < 0)
 		operator<< (std::string_view(" -> ")) << std::strerror(-retvalRef);
 	else
-		operator<< (std::string_view(" -> ERROR #")) << retvalRef;
+		operator<< (std::string_view(" -> ")) << retvalRef;
 
-	retvalVal = retvalRef;
+	retvalVal = retvalRef < 0 ? retvalRef : 0;
 }

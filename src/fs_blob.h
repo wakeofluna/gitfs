@@ -14,6 +14,7 @@ public:
 
 	std::string_view name() const override;
 	int fillStat(struct stat *st) const override;
+	int read(char * buffer, size_t bufsize, off_t offset) const override;
 
 private:
 	GitBlob mBlob;

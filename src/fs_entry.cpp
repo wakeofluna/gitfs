@@ -45,3 +45,8 @@ int FSEntry::readLink(char * buffer, size_t bufsize) const
 {
 	return -EINVAL;
 }
+
+int FSEntry::read(char * buffer, size_t bufsize, off_t offset) const
+{
+	return -EINVAL;
+}
