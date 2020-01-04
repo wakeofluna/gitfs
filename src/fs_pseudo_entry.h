@@ -10,8 +10,6 @@ public:
 	FSPseudoEntry(const FSPseudoEntry & other) = delete;
 	virtual ~FSPseudoEntry();
 
-	InodeType inode() const override;
-
 	bool isUnlinked() const override;
 	int setUnlinked(bool unlinked) override;
 

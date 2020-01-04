@@ -1,7 +1,7 @@
 #include "git_wrappers.h"
 #include <git2.h>
 
-GitReference GitRepository::head() const
+GitReference GitRepositoryView::head() const
 {
 	GitReference ref;
 	if (data)
@@ -9,7 +9,7 @@ GitReference GitRepository::head() const
 	return ref;
 }
 
-GitReference GitRepository::resolveReference(const char *shorthand) const
+GitReference GitRepositoryView::resolveReference(const char *shorthand) const
 {
 	GitReference ref;
 	if (data && shorthand)
@@ -17,7 +17,7 @@ GitReference GitRepository::resolveReference(const char *shorthand) const
 	return ref;
 }
 
-GitBlob GitRepository::resolveBlob(const git_oid * oid) const
+GitBlob GitRepositoryView::resolveBlob(const git_oid * oid) const
 {
 	GitBlob blob;
 	if (data && oid)
@@ -25,7 +25,7 @@ GitBlob GitRepository::resolveBlob(const git_oid * oid) const
 	return blob;
 }
 
-GitCommit GitRepository::resolveCommit(const git_oid * oid) const
+GitCommit GitRepositoryView::resolveCommit(const git_oid * oid) const
 {
 	GitCommit commit;
 	if (data && oid)
@@ -33,7 +33,15 @@ GitCommit GitRepository::resolveCommit(const git_oid * oid) const
 	return commit;
 }
 
-GitObject GitRepository::resolveObject(const git_oid * oid, git_object_t type) const
+GitCommit GitRepositoryView::resolveCommit(const git_oid * oid, size_t oidSize) const
+{
+	GitCommit commit;
+	if (data && oid && oidSize)
+		git_commit_lookup_prefix(commit.fill(), data, oid, oidSize);
+	return commit;
+}
+
+GitObject GitRepositoryView::resolveObject(const git_oid * oid, git_object_t type) const
 {
 	GitObject object;
 	if (data && oid)
@@ -41,7 +49,15 @@ GitObject GitRepository::resolveObject(const git_oid * oid, git_object_t type) c
 	return object;
 }
 
-GitTag GitRepository::resolveTag(const git_oid * oid) const
+GitObject GitRepositoryView::resolveObject(const git_oid * shortOid, size_t oidSize, git_object_t type) const
+{
+	GitObject object;
+	if (data && shortOid && oidSize)
+		git_object_lookup_prefix(object.fill(), data, shortOid, oidSize, type);
+	return object;
+}
+
+GitTag GitRepositoryView::resolveTag(const git_oid * oid) const
 {
 	GitTag tag;
 	if (data && oid)
@@ -49,7 +65,7 @@ GitTag GitRepository::resolveTag(const git_oid * oid) const
 	return tag;
 }
 
-GitTree GitRepository::resolveTree(const git_oid * oid) const
+GitTree GitRepositoryView::resolveTree(const git_oid * oid) const
 {
 	GitTree tree;
 	if (data && oid)
@@ -57,7 +73,7 @@ GitTree GitRepository::resolveTree(const git_oid * oid) const
 	return tree;
 }
 
-int GitRepository::forEachReference(const std::function<int(GitReference &)> & func) const
+int GitRepositoryView::forEachReference(const std::function<int(GitReference &)> & func) const
 {
 	if (!data)
 		return GIT_ENOTFOUND;
@@ -77,7 +93,7 @@ int GitRepository::forEachReference(const std::function<int(GitReference &)> & f
 	return giterr == GIT_ITEROVER ? 0 : giterr;
 }
 
-int GitRepository::forEachReference(const std::function<int(const char *)> & func) const
+int GitRepositoryView::forEachReference(const std::function<int(const char *)> & func) const
 {
 	if (!data)
 		return GIT_ENOTFOUND;
@@ -97,12 +113,12 @@ int GitRepository::forEachReference(const std::function<int(const char *)> & fun
 	return giterr == GIT_ITEROVER ? 0 : giterr;
 }
 
-int GitRepository::targetByName(git_oid * oid, const char *name) const
+int GitRepositoryView::targetByName(git_oid * oid, const char *name) const
 {
 	return ((data && oid && name) ? git_reference_name_to_id(oid, data, name) : GIT_ENOTFOUND);
 }
 
-GitReference GitReference::dup() const
+GitReference GitReferenceView::dup() const
 {
 	GitReference ref;
 
@@ -116,12 +132,12 @@ GitReference GitReference::dup() const
 	return ref;
 }
 
-GitReference::Type GitReference::type() const
+GitReference::Type GitReferenceView::type() const
 {
 	return (data ? static_cast<GitReference::Type>(git_reference_type(data)) : GitReference::INVALID);
 }
 
-GitReference GitReference::resolve() const
+GitReference GitReferenceView::resolve() const
 {
 	GitReference ref;
 
@@ -135,37 +151,52 @@ GitReference GitReference::resolve() const
 	return ref;
 }
 
-const char *GitReference::name() const
+const char *GitReferenceView::name() const
 {
 	return (data ? git_reference_name(data) : nullptr);
 }
 
-const git_oid *GitReference::target() const
+const git_oid *GitReferenceView::target() const
 {
 	return (data ? git_reference_target(data) : nullptr);
 }
 
-git_repository *GitCommit::owner() const
+GitRepositoryView GitBlobView::owner() const
+{
+	return (data ? git_blob_owner(data) : 0);
+}
+
+const git_oid *GitBlobView::id() const
+{
+	return (data ? git_blob_id(data) : 0);
+}
+
+off_t GitBlobView::size() const
+{
+	return (data ? git_blob_rawsize(data) : 0);
+}
+
+GitRepositoryView GitCommitView::owner() const
 {
 	return (data ? git_commit_owner(data) : nullptr);
 }
 
-const git_oid *GitCommit::id() const
+const git_oid *GitCommitView::id() const
 {
 	return (data ? git_commit_id(data) : nullptr);
 }
 
-const git_oid *GitCommit::parentId(unsigned int parentNr) const
+const git_oid *GitCommitView::parentId(unsigned int parentNr) const
 {
 	return (data ? git_commit_parent_id(data, parentNr) : nullptr);
 }
 
-unsigned int GitCommit::parentCount() const
+unsigned int GitCommitView::parentCount() const
 {
 	return (data ? git_commit_parentcount(data) : 0);
 }
 
-GitObject GitCommit::object() const
+GitObject GitCommitView::object() const
 {
 	GitObject object;
 	if (data)
@@ -173,17 +204,73 @@ GitObject GitCommit::object() const
 	return object;
 }
 
-git_time_t GitCommit::time() const
+git_time_t GitCommitView::time() const
 {
 	return (data ? git_commit_time(data) : git_time_t());
 }
 
-const git_oid *GitObject::id() const
+GitTree GitCommitView::tree() const
+{
+	GitTree tree;
+	if (data)
+		git_commit_tree(tree.fill(), data);
+	return tree;
+}
+
+GitRepositoryView GitTreeView::owner() const
+{
+	return (data ? git_tree_owner(data) : nullptr);
+}
+
+const git_oid *GitTreeView::id() const
+{
+	return (data ? git_tree_id(data) : nullptr);
+}
+
+size_t GitTreeView::entryCount() const
+{
+	return (data ? git_tree_entrycount(data) : 0);
+}
+
+GitTreeEntryView GitTreeView::byIndex(size_t index) const
+{
+	return (data ? GitTreeEntryView(git_tree_entry_byindex(data, index)) : GitTreeEntryView());
+}
+
+GitTreeEntry GitTreeView::byPath(const char *path) const
+{
+	GitTreeEntry entry;
+	if (data)
+		git_tree_entry_bypath(entry.fill(), data, path);
+	return entry;
+}
+
+const git_oid *GitTreeEntryView::id() const
+{
+	return (data ? git_tree_entry_id(data) : nullptr);
+}
+
+const char *GitTreeEntryView::name() const
+{
+	return (data ? git_tree_entry_name(data) : nullptr);
+}
+
+git_object_t GitTreeEntryView::type() const
+{
+	return (data ? git_tree_entry_type(data) : GIT_OBJECT_INVALID);
+}
+
+git_filemode_t GitTreeEntryView::mode() const
+{
+	return (data ? git_tree_entry_filemode(data) : GIT_FILEMODE_UNREADABLE);
+}
+
+const git_oid *GitObjectView::id() const
 {
 	return (data ? git_object_id(data) : nullptr);
 }
 
-std::string GitObject::shortId() const
+std::string GitObjectView::shortId() const
 {
 	git_buf buf = {};
 	if (data)
@@ -191,12 +278,12 @@ std::string GitObject::shortId() const
 	return (buf.size > 0 ? std::string(buf.ptr, buf.size) : std::string());
 }
 
-git_object_t GitObject::type() const
+git_object_t GitObjectView::type() const
 {
 	return (data ? git_object_type(data) : GIT_OBJECT_INVALID);
 }
 
-GitObject GitObject::peel(git_object_t type) const
+GitObject GitObjectView::peel(git_object_t type) const
 {
 	GitObject object;
 	if (data)

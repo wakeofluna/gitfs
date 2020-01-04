@@ -1,5 +1,10 @@
 #include "fs_entry.h"
 
+FSEntry::InodeType FSEntry::inodeFromOid(const git_oid * oid)
+{
+	return (oid ? *((const FSEntry::InodeType*)oid) & FSRealMask : 0);
+}
+
 bool FSEntry::isUnlinked() const
 {
 	return false;
@@ -15,7 +20,7 @@ size_t FSEntry::purgeUnlinked()
 	return 0;
 }
 
-int FSEntry::getChild(const std::string_view & name, std::shared_ptr<FSEntry> & target) const
+int FSEntry::getChild(std::string_view & name, std::shared_ptr<FSEntry> & target) const
 {
 	target.reset();
 	return -ENOTDIR;

@@ -55,9 +55,7 @@ void FSCommitLink::updateFromCommit(const GitCommit & commit, int parent)
 	const git_oid * oid = (parent == -1 ? commit.id() : commit.parentId(parent));
 	if (oid)
 	{
-		// XXX do this through the classes and not by calling git functions directly
-		GitObject object;
-		git_object_lookup(object.fill(), commit.owner(), oid, GIT_OBJECT_COMMIT);
+		GitObject object = commit.owner().resolveObject(oid, GIT_OBJECT_COMMIT);
 
 		for (unsigned int i = 0; i < mDepth; ++i)
 			mLink += "../";

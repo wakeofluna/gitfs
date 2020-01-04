@@ -1,11 +1,14 @@
 set(SOURCE_FILES
 	command_line.cpp
+	fs_blob.cpp
 	fs_branch.cpp
+	fs_commit.cpp
 	fs_commit_link.cpp
 	fs_entry.cpp
 	fs_pseudo_directory.cpp
 	fs_pseudo_entry.cpp
 	fs_root.cpp
+	fs_tree.cpp
 	git_context.cpp
 	git_wrappers.cpp
 	logger.cpp

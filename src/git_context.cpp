@@ -85,16 +85,12 @@ int resolvePath(const FSEntryPtr & root, std::string_view path, FSEntryVector & 
 
 	while (!path.empty())
 	{
-		auto nextSep = path.find('/');
-		std::string_view segment = path.substr(0, nextSep);
-
 		std::shared_ptr<FSEntry> nextEntry;
-		retval = stack.back()->getChild(segment, nextEntry);
+		retval = stack.back()->getChild(path, nextEntry);
 		if (retval)
 			break;
 
 		stack.push_back(nextEntry);
-		path = (nextSep == path.npos ? std::string_view() : path.substr(nextSep+1));
 	}
 
 	return retval;
@@ -125,8 +121,8 @@ GitContext::GitContext(MountContext & mountcontext, const fuse_conn_info *info, 
 	atime = 0;
 	time(&atime);
 
-	root = std::make_shared<FSRoot>();
-	root->rebuildRefs(repository);
+	root = std::make_shared<FSRoot>(repository);
+	root->rebuildRefs();
 	fileInfoKey = 0;
 
 	if (debug)

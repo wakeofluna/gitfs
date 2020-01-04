@@ -70,7 +70,8 @@ void FSBranch::updateHeads()
 		if (i > 0)
 			newName += (i + '1');
 
-		getChild(newName, entry);
+		std::string_view name(newName);
+		getChild(name, entry);
 		if (!entry)
 		{
 			entry = std::make_shared<FSCommitLink>(newName, mDepth);
