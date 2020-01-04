@@ -89,7 +89,7 @@ int resolvePath(const FSEntryPtr & root, std::string_view path, FSEntryVector & 
 	while (!path.empty())
 	{
 		std::shared_ptr<FSEntry> nextEntry;
-		retval = stack.back()->getChild(path, nextEntry);
+		retval = stack.back()->getChild(path, nextEntry, false);
 		if (retval)
 			break;
 

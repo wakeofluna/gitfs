@@ -18,7 +18,7 @@ int FSPseudoDirectory::fillStat(struct stat *st) const
 	return 0;
 }
 
-int FSPseudoDirectory::getChild(std::string_view & name, std::shared_ptr<FSEntry> & target) const
+int FSPseudoDirectory::getChild(std::string_view & name, std::shared_ptr<FSEntry> & target, bool allowUnlinked) const
 {
 	std::lock_guard<std::recursive_mutex> guard(gLock);
 
@@ -26,7 +26,7 @@ int FSPseudoDirectory::getChild(std::string_view & name, std::shared_ptr<FSEntry
 	std::string_view segment = name.substr(0, nextSep);
 
 	auto iter = mEntries.find(segment);
-	if (iter == mEntries.cend() || iter->second->isUnlinked())
+	if (iter == mEntries.cend() || (!allowUnlinked && iter->second->isUnlinked()))
 		return -ENOENT;
 
 	name = (nextSep == name.npos ? std::string_view() : name.substr(nextSep+1));

@@ -44,7 +44,7 @@ public:
 	virtual size_t purgeUnlinked();
 
 	/* Optional support for child entries */
-	virtual int getChild(std::string_view & name, std::shared_ptr<FSEntry> & target) const;
+	virtual int getChild(std::string_view & name, std::shared_ptr<FSEntry> & target, bool allowUnlinked) const;
 	virtual int addChild(const std::shared_ptr<FSEntry> & entry, bool allowReplace = false);
 	virtual int removeChild(const std::string_view & name);
 	virtual int enumerateChildren(const EnumerateFunction & callback, off_t start, struct stat *st) const;

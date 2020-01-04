@@ -56,7 +56,6 @@ int FSBranch::setBranch(GitRepository & repo, const char *branch)
 
 void FSBranch::updateHeads()
 {
-	FSEntryPtr entry;
 	FSCommitLink *link;
 
 	const int nrParents = mHead.parentCount();
@@ -71,10 +70,11 @@ void FSBranch::updateHeads()
 			newName += (i + '1');
 
 		std::string_view name(newName);
-		getChild(name, entry);
+		FSEntryPtr entry;
+		getChild(name, entry, true);
 		if (!entry)
 		{
-			entry = std::make_shared<FSCommitLink>(newName, mDepth);
+			entry = std::make_shared<FSCommitLink>(std::move(newName), mDepth);
 			addChild(entry);
 		}
 

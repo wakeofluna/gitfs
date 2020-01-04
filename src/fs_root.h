@@ -13,7 +13,7 @@ public:
 	int type() const override;
 
 	std::string_view name() const override;
-	int getChild(std::string_view & name, std::shared_ptr<FSEntry> & target) const override;
+	int getChild(std::string_view & name, std::shared_ptr<FSEntry> & target, bool allowUnlinked) const override;
 
 	void rebuildRefs();
 

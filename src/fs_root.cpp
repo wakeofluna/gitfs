@@ -21,7 +21,7 @@ std::string_view FSRoot::name() const
 	return std::string_view(empty, 0);
 }
 
-int FSRoot::getChild(std::string_view & name, std::shared_ptr<FSEntry> & target) const
+int FSRoot::getChild(std::string_view & name, std::shared_ptr<FSEntry> & target, bool allowUnlinked) const
 {
 	std::lock_guard<std::recursive_mutex> guard(gLock);
 
@@ -40,7 +40,7 @@ int FSRoot::getChild(std::string_view & name, std::shared_ptr<FSEntry> & target)
 		}
 	}
 
-	return FSPseudoDirectory::getChild(name, target);
+	return FSPseudoDirectory::getChild(name, target, allowUnlinked);
 }
 
 void FSRoot::rebuildRefs()
@@ -71,7 +71,7 @@ void FSRoot::rebuildRefs()
 			ref = (nextSep == ref.npos ? std::string_view() : ref.substr(nextSep+1));
 
 			FSEntryPtr nextEntry;
-			int retval = current->getChild(segment, nextEntry);
+			int retval = current->getChild(segment, nextEntry, true);
 			if (retval == -ENOENT)
 			{
 				nextEntry = std::make_shared<FSBranch>(std::string(segment), depth);

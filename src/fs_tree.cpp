@@ -32,7 +32,7 @@ int FSTree::fillStat(struct stat *st) const
 	return 0;
 }
 
-int FSTree::getChild(std::string_view & name, std::shared_ptr<FSEntry> & target) const
+int FSTree::getChild(std::string_view & name, std::shared_ptr<FSEntry> & target, bool allowUnlinked) const
 {
 	int retval = -ENOENT;
 

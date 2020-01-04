@@ -20,7 +20,7 @@ size_t FSEntry::purgeUnlinked()
 	return 0;
 }
 
-int FSEntry::getChild(std::string_view & name, std::shared_ptr<FSEntry> & target) const
+int FSEntry::getChild(std::string_view & name, std::shared_ptr<FSEntry> & target, bool allowUnlinked) const
 {
 	target.reset();
 	return -ENOTDIR;
