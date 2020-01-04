@@ -43,10 +43,10 @@ int FSBlob::read(char * buffer, size_t bufsize, off_t offset) const
 	const void * content = mBlob.content();
 	size_t contentSize = mBlob.size();
 
-	if (!content)
+	if (!content || offset < 0)
 		return -EIO;
 
-	if (offset >= contentSize)
+	if (size_t(offset) >= contentSize)
 		return 0;
 
 	size_t contentLen = contentSize - offset;

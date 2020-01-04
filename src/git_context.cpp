@@ -27,8 +27,6 @@ namespace
 {
 
 constexpr fuse_operations _operations = {
-	.init = &GitContext::_fuse_init,
-	.destroy = &GitContext::_fuse_destroy,
 	.getattr = &GitContext::_fuse_getattr,
 	.readlink = &GitContext::_fuse_readlink,
 	.open = &GitContext::_fuse_open,
@@ -37,6 +35,8 @@ constexpr fuse_operations _operations = {
 	.opendir = &GitContext::_fuse_open,
 	.readdir = &GitContext::_fuse_readdir,
 	.releasedir = &GitContext::_fuse_release,
+	.init = &GitContext::_fuse_init,
+	.destroy = &GitContext::_fuse_destroy,
 };
 
 template <typename ...ARGS>

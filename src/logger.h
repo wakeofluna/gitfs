@@ -11,9 +11,9 @@ class Logger
 {
 public:
 	struct Retval {};
-	static constexpr Retval retval;
+	static constexpr Retval retval = {};
 	struct RemoveRetval {};
-	static constexpr RemoveRetval removeRetval;
+	static constexpr RemoveRetval removeRetval = {};
 
 	Logger(const int & retvalRef, bool autoOutput = false, size_t reserve = 128);
 	~Logger();
