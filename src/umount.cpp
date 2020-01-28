@@ -1,4 +1,5 @@
 #include <cstdlib>
+#include <iostream>
 #include "gitfs.h"
 
 namespace
@@ -6,7 +7,8 @@ namespace
 
 int umount_main(int argc, char **argv)
 {
-	return EXIT_SUCCESS;
+	std::cerr << "Not implemented yet. Use \"fusermount3 -u path\"" << std::endl;
+	return EXIT_FAILURE;
 }
 
 } // namespace
